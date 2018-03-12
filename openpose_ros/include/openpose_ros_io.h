@@ -6,6 +6,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/image_encodings.h>
 #include <std_msgs/Header.h>
+#include "std_msgs/String.h"
 
 #include <opencv2/core/core.hpp>
 
@@ -27,6 +28,7 @@ namespace openpose_ros {
         private:
             ros::NodeHandle nh_;
             ros::Publisher openpose_human_list_pub_;
+	    ros::Publisher openpose_human_count_pub_;
             image_transport::ImageTransport it_;
             image_transport::Subscriber image_sub_;
             cv_bridge::CvImagePtr cv_img_ptr_;

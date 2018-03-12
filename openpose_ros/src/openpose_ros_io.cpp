@@ -7,12 +7,16 @@ OpenPoseROSIO::OpenPoseROSIO(OpenPose &openPose): it_(nh_)
     // Subscribe to input video feed and publish human lists as output
     std::string image_topic;
     std::string output_topic;
+    std::string output_topic_2;
+
 
     nh_.param("/openpose_ros_node/image_topic", image_topic, std::string("/camera/image_raw"));
     nh_.param("/openpose_ros_node/output_topic", output_topic, std::string("/openpose_ros/human_list"));
+    nh_.param("/openpose_ros_node/output_topic_2", output_topic_2, std::string("/openpose_ros/human_count"));
 
     image_sub_ = it_.subscribe(image_topic, 1, &OpenPoseROSIO::processImage, this);
     openpose_human_list_pub_ = nh_.advertise<openpose_ros_msgs::OpenPoseHumanList>(output_topic, 10);
+    openpose_human_count_pub_ = nh_.advertise<std_msgs::String>(output_topic_2, 10);
     cv_img_ptr_ = nullptr;
     openpose_ = &openPose;
 }
@@ -104,6 +108,7 @@ void OpenPoseROSIO::printKeypoints(const std::shared_ptr<std::vector<op::Datum>>
         op::log("\nKeypoints:");
         // Accesing each element of the keypoints
         const auto& poseKeypoints = datumsPtr->at(0).poseKeypoints;
+	op::log(std::to_string(poseKeypoints.getSize(0)));
         op::log("Person pose keypoints:");
         for (auto person = 0 ; person < poseKeypoints.getSize(0) ; person++)
         {
@@ -247,6 +252,10 @@ void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<op::Datum>>& datum
         human_list_msg.human_list = human_list;
 
         openpose_human_list_pub_.publish(human_list_msg);
+	std_msgs::String msg;
+    	msg.data = std::to_string(poseKeypoints.getSize(0));
+
+	openpose_human_count_pub_.publish(msg);
 
     }
     else
