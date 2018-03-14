@@ -8,15 +8,19 @@ OpenPoseROSIO::OpenPoseROSIO(OpenPose &openPose): it_(nh_)
     std::string image_topic;
     std::string output_topic;
     std::string output_topic_2;
+    std::string output_topic_video;
 
 
     nh_.param("/openpose_ros_node/image_topic", image_topic, std::string("/camera/image_raw"));
     nh_.param("/openpose_ros_node/output_topic", output_topic, std::string("/openpose_ros/human_list"));
     nh_.param("/openpose_ros_node/output_topic_2", output_topic_2, std::string("/openpose_ros/human_count"));
+    nh_.param("/openpose_ros_node/output_topic_video", output_topic_video, std::string("/openpose_ros/image"));
 
     image_sub_ = it_.subscribe(image_topic, 1, &OpenPoseROSIO::processImage, this);
     openpose_human_list_pub_ = nh_.advertise<openpose_ros_msgs::OpenPoseHumanList>(output_topic, 10);
     openpose_human_count_pub_ = nh_.advertise<std_msgs::String>(output_topic_2, 10);
+    openpose_image_ = nh_.advertise<sensor_msgs::Image>(output_topic_video, 15);
+
     cv_img_ptr_ = nullptr;
     openpose_ = &openPose;
 }
@@ -32,9 +36,8 @@ void OpenPoseROSIO::processImage(const sensor_msgs::ImageConstPtr& msg)
     std::shared_ptr<std::vector<op::Datum>> datumProcessed;
     if (successfullyEmplaced && openpose_->waitAndPop(datumProcessed))
     {
-        display(datumProcessed);
-        printKeypoints(datumProcessed);
-        publish(datumProcessed);
+        publishImageTopics(datumProcessed);
+        publishPersonCountTopic(datumProcessed);
     }
     else
     {
@@ -95,169 +98,22 @@ bool OpenPoseROSIO::display(const std::shared_ptr<std::vector<op::Datum>>& datum
     return (key == 27);
 }
 
-cv_bridge::CvImagePtr& OpenPoseROSIO::getCvImagePtr()
-{
-    return cv_img_ptr_;
+void OpenPoseROSIO::publishImageTopics(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr){
+    auto outputIm = datumsPtr->at(0).cvOutputData;
+    cv::putText(outputIm, "Person count: " + std::to_string(datumsPtr->at(0).poseKeypoints.getSize(0)),
+                cv::Point(25,25),
+                cv::FONT_HERSHEY_COMPLEX_SMALL, 1.0, cv::Scalar(255,255,255),1);
+
+
+    sensor_msgs::ImagePtr img = cv_bridge::CvImage(std_msgs::Header(), "bgr8", outputIm).toImageMsg();
+    openpose_image_.publish(img);
 }
 
-void OpenPoseROSIO::printKeypoints(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr)
+void OpenPoseROSIO::publishPersonCountTopic(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr)
 {
-    // Example: How to use the pose keypoints
-    if (datumsPtr != nullptr && !datumsPtr->empty())
-    {
-        op::log("\nKeypoints:");
-        // Accesing each element of the keypoints
-        const auto& poseKeypoints = datumsPtr->at(0).poseKeypoints;
-	op::log(std::to_string(poseKeypoints.getSize(0)));
-        op::log("Person pose keypoints:");
-        for (auto person = 0 ; person < poseKeypoints.getSize(0) ; person++)
-        {
-            op::log("Person " + std::to_string(person) + " (x, y, score):");
-            for (auto bodyPart = 0 ; bodyPart < poseKeypoints.getSize(1) ; bodyPart++)
-            {
-                std::string valueToPrint;
-                for (auto xyscore = 0 ; xyscore < poseKeypoints.getSize(2) ; xyscore++)
-                    valueToPrint += std::to_string(   poseKeypoints[{person, bodyPart, xyscore}]   ) + " ";
-                op::log(valueToPrint);
-            }
-        }
-        op::log(" ");
-        // Alternative: just getting std::string equivalent
-        op::log("Face keypoints: " + datumsPtr->at(0).faceKeypoints.toString());
-        op::log("Left hand keypoints: " + datumsPtr->at(0).handKeypoints[0].toString());
-        op::log("Right hand keypoints: " + datumsPtr->at(0).handKeypoints[1].toString());
-        // Heatmaps
-        const auto& poseHeatMaps = datumsPtr->at(0).poseHeatMaps;
-        if (!poseHeatMaps.empty())
-        {
-            op::log("Pose heatmaps size: [" + std::to_string(poseHeatMaps.getSize(0)) + ", "
-                    + std::to_string(poseHeatMaps.getSize(1)) + ", "
-                    + std::to_string(poseHeatMaps.getSize(2)) + "]");
-            const auto& faceHeatMaps = datumsPtr->at(0).faceHeatMaps;
-            op::log("Face heatmaps size: [" + std::to_string(faceHeatMaps.getSize(0)) + ", "
-                    + std::to_string(faceHeatMaps.getSize(1)) + ", "
-                    + std::to_string(faceHeatMaps.getSize(2)) + ", "
-                    + std::to_string(faceHeatMaps.getSize(3)) + "]");
-            const auto& handHeatMaps = datumsPtr->at(0).handHeatMaps;
-            op::log("Left hand heatmaps size: [" + std::to_string(handHeatMaps[0].getSize(0)) + ", "
-                    + std::to_string(handHeatMaps[0].getSize(1)) + ", "
-                    + std::to_string(handHeatMaps[0].getSize(2)) + ", "
-                    + std::to_string(handHeatMaps[0].getSize(3)) + "]");
-            op::log("Right hand heatmaps size: [" + std::to_string(handHeatMaps[1].getSize(0)) + ", "
-                    + std::to_string(handHeatMaps[1].getSize(1)) + ", "
-                    + std::to_string(handHeatMaps[1].getSize(2)) + ", "
-                    + std::to_string(handHeatMaps[1].getSize(3)) + "]");
-        }
-    }
-    else
-        op::log("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
+    std_msgs::String msg;
+    msg.data = "Person Count: " + std::to_string(datumsPtr->at(0).poseKeypoints.getSize(0));
+
+    openpose_human_count_pub_.publish(msg);
 }
 
-void OpenPoseROSIO::publish(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr)
-{
-    if (datumsPtr != nullptr && !datumsPtr->empty() && !FLAGS_body_disable)
-    {
-        const auto& poseKeypoints = datumsPtr->at(0).poseKeypoints;
-        const auto& faceKeypoints = datumsPtr->at(0).faceKeypoints;
-        const auto& leftHandKeypoints = datumsPtr->at(0).handKeypoints[0];
-        const auto& rightHandKeypoints = datumsPtr->at(0).handKeypoints[1];
-        std::vector<op::Rectangle<float>>& face_rectangles = datumsPtr->at(0).faceRectangles;
-
-        openpose_ros_msgs::OpenPoseHumanList human_list_msg;
-        human_list_msg.header.stamp = ros::Time::now();
-        human_list_msg.rgb_image_header = rgb_image_header_;
-        human_list_msg.num_humans = poseKeypoints.getSize(0);
-        
-        std::vector<openpose_ros_msgs::OpenPoseHuman> human_list(poseKeypoints.getSize(0));
-
-        for (auto person = 0 ; person < poseKeypoints.getSize(0) ; person++)
-        {
-            openpose_ros_msgs::OpenPoseHuman human;
-
-            int num_body_key_points_with_non_zero_prob = 0;
-            for (auto bodyPart = 0 ; bodyPart < poseKeypoints.getSize(1) ; bodyPart++)
-            {
-                openpose_ros_msgs::PointWithProb body_point_with_prob;
-                body_point_with_prob.x = poseKeypoints[{person, bodyPart, 0}];
-                body_point_with_prob.y = poseKeypoints[{person, bodyPart, 1}];
-                body_point_with_prob.prob = poseKeypoints[{person, bodyPart, 2}];
-                if(body_point_with_prob.prob > 0)
-                {
-                    num_body_key_points_with_non_zero_prob++;
-                }
-                human.body_key_points_with_prob.at(bodyPart) = body_point_with_prob;
-            }
-            human.num_body_key_points_with_non_zero_prob = num_body_key_points_with_non_zero_prob;
-
-            if(FLAGS_face)
-            {
-                int num_face_key_points_with_non_zero_prob = 0;
-
-                for (auto facePart = 0 ; facePart < faceKeypoints.getSize(1) ; facePart++)
-                {
-                    openpose_ros_msgs::PointWithProb face_point_with_prob;
-                    face_point_with_prob.x = faceKeypoints[{person, facePart, 0}];
-                    face_point_with_prob.y = faceKeypoints[{person, facePart, 1}];
-                    face_point_with_prob.prob = faceKeypoints[{person, facePart, 2}];
-                    if(face_point_with_prob.prob > 0)
-                    {
-                        num_face_key_points_with_non_zero_prob++;
-                    }
-                    human.face_key_points_with_prob.at(facePart) = face_point_with_prob;
-                }  
-                human.num_face_key_points_with_non_zero_prob = num_face_key_points_with_non_zero_prob;
-
-                openpose_ros_msgs::BoundingBox face_bounding_box;
-                face_bounding_box.x = face_rectangles.at(person).x;
-                face_bounding_box.y = face_rectangles.at(person).y;
-                face_bounding_box.width = face_rectangles.at(person).width;
-                face_bounding_box.height = face_rectangles.at(person).height;
-                human.face_bounding_box = face_bounding_box;
-            }
-            
-            if(FLAGS_hand)
-            {
-
-                int num_right_hand_key_points_with_non_zero_prob = 0;
-                int num_left_hand_key_points_with_non_zero_prob = 0;
-
-                for (auto handPart = 0 ; handPart < rightHandKeypoints.getSize(1) ; handPart++)
-                {
-                    openpose_ros_msgs::PointWithProb right_hand_point_with_prob;
-                    openpose_ros_msgs::PointWithProb left_hand_point_with_prob;
-                    right_hand_point_with_prob.x = rightHandKeypoints[{person, handPart, 0}];
-                    right_hand_point_with_prob.y = rightHandKeypoints[{person, handPart, 1}];
-                    right_hand_point_with_prob.prob = rightHandKeypoints[{person, handPart, 2}];
-                    if(right_hand_point_with_prob.prob > 0)
-                    {
-                        num_right_hand_key_points_with_non_zero_prob++;
-                    }
-                    left_hand_point_with_prob.x = leftHandKeypoints[{person, handPart, 0}];
-                    left_hand_point_with_prob.y = leftHandKeypoints[{person, handPart, 1}];
-                    left_hand_point_with_prob.prob = leftHandKeypoints[{person, handPart, 2}];
-                    if(left_hand_point_with_prob.prob > 0)
-                    {
-                        num_left_hand_key_points_with_non_zero_prob++;
-                    }
-                    human.right_hand_key_points_with_prob.at(handPart) = right_hand_point_with_prob;
-                    human.left_hand_key_points_with_prob.at(handPart) = left_hand_point_with_prob;
-                }
-                human.num_right_hand_key_points_with_non_zero_prob = num_right_hand_key_points_with_non_zero_prob;
-                human.num_left_hand_key_points_with_non_zero_prob = num_left_hand_key_points_with_non_zero_prob;
-            }
-
-            human_list.at(person) = human;
-        }
-
-        human_list_msg.human_list = human_list;
-
-        openpose_human_list_pub_.publish(human_list_msg);
-	std_msgs::String msg;
-    	msg.data = std::to_string(poseKeypoints.getSize(0));
-
-	openpose_human_count_pub_.publish(msg);
-
-    }
-    else
-        op::log("Nullptr or empty datumsPtr found.", op::Priority::High, __LINE__, __FUNCTION__, __FILE__);
-}

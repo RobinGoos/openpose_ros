@@ -28,7 +28,8 @@ namespace openpose_ros {
         private:
             ros::NodeHandle nh_;
             ros::Publisher openpose_human_list_pub_;
-	    ros::Publisher openpose_human_count_pub_;
+	        ros::Publisher openpose_human_count_pub_;
+            ros::Publisher openpose_image_;
             image_transport::ImageTransport it_;
             image_transport::Subscriber image_sub_;
             cv_bridge::CvImagePtr cv_img_ptr_;
@@ -49,11 +50,9 @@ namespace openpose_ros {
 
             bool display(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
 
-            cv_bridge::CvImagePtr& getCvImagePtr();
+            void publishImageTopics(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
 
-            void printKeypoints(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
-
-            void publish(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
+            void publishPersonCountTopic(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
     };
 }
 

@@ -1,9 +1,8 @@
 <launch>
 
   <!-- Start openpose_ros -->
-  <node pkg="openpose_ros" type="openpose_ros_node" name="openpose_ros_node" output="screen">
+  <node pkg="openpose_ros" type="openpose_ros_node" name="openpose_ros_node">
     <param name="image_topic"   	value="/focus_vision/image/compressed" />
     <param name="output_topic"      value="/openpose_ros/human_list" />
   </node>
-
 </launch>
