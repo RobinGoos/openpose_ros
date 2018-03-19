@@ -1,6 +1,7 @@
 # openpose_ros
 
 Example ROS catkin package that utilizes the OpenPose library from https://github.com/CMU-Perceptual-Computing-Lab/openpose.
+Takes OpenPose output and converts it into a rostopic. 
 
 ## System
 Tested on:
