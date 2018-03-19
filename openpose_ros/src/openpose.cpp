@@ -41,11 +41,13 @@ OpenPose::OpenPose() : outputSize(op::flagsToPoint(FLAGS_output_resolution, "-1x
                                            FLAGS_write_heatmaps, FLAGS_write_heatmaps_format)
 
 
+
+
 {
     if (!FLAGS_write_keypoint.empty() || !FLAGS_write_keypoint_json.empty())
     {
         op::log("Flags `write_keypoint` and `write_keypoint_json` are deprecated and will eventually be removed."
-                " Please, use `write_json` instead.", op::Priority::Max);
+                        " Please, use `write_json` instead.", op::Priority::Max);
     }
 
     // Logging
@@ -59,7 +61,7 @@ OpenPose::OpenPose() : outputSize(op::flagsToPoint(FLAGS_output_resolution, "-1x
     // Set to single-thread running (to debug and/or reduce latency)
     if (FLAGS_disable_multi_thread)
     {
-       opWrapper.disableMultiThreading();
+        opWrapper.disableMultiThreading();
     }
 
 }

@@ -17,6 +17,7 @@
 
 #include <openpose.h>
 #include <gflags_options.h>
+#include <openpose_ros_node.h>
 
 // OpenPose dependencies
 #include <openpose/headers.hpp>
@@ -30,6 +31,7 @@ namespace openpose_ros {
             ros::Publisher openpose_human_list_pub_;
 	        ros::Publisher openpose_human_count_pub_;
             ros::Publisher openpose_image_;
+            ros::Subscriber param_sub_;
             image_transport::ImageTransport it_;
             image_transport::Subscriber image_sub_;
             cv_bridge::CvImagePtr cv_img_ptr_;
@@ -48,11 +50,13 @@ namespace openpose_ros {
 
             std::shared_ptr<std::vector<op::Datum>> createDatum();
 
-            bool display(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
-
             void publishImageTopics(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
 
             void publishPersonCountTopic(const std::shared_ptr<std::vector<op::Datum>>& datumsPtr);
+
+            void parameterSubscriber();
+
+            void paramCallback(const std_msgs::String::ConstPtr& msg);
     };
 }
 

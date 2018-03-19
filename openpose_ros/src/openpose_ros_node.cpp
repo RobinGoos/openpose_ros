@@ -1,30 +1,10 @@
-// ------------------------- OpenPose Library Tutorial - Wrapper - Example 1 - Asynchronous -------------------------
-// Asynchronous mode: ideal for fast prototyping when performance is not an issue. The user emplaces/pushes and pops frames from the OpenPose wrapper
-// when he desires to.
+#include <openpose_ros_node.h>
 
-// This example shows the user how to use the OpenPose wrapper class:
-    // 1. User reads images
-    // 2. Extract and render keypoint / heatmap / PAF of that image
-    // 3. Save the results on disk
-    // 4. User displays the rendered pose
-    // Everything in a multi-thread scenario
-// In addition to the previous OpenPose modules, we also need to use:
-    // 1. `core` module:
-        // For the Array<float> class that the `pose` module needs
-        // For the Datum struct that the `thread` module sends between the queues
-    // 2. `utilities` module: for the error & logging functions, i.e. op::error & op::log respectively
-// This file should only be used for the user to take specific examples.
+using namespace openpose_ros;
 
-// C++ std library dependencies
-#include <chrono> // `std::chrono::` functions and classes, e.g. std::chrono::milliseconds
-#include <thread> // std::this_thread
-
-#include <openpose.h>
-#include <openpose_ros_io.h>
-#include <gflags_options.h>
-
-int openPoseROS()
+int openPoseROS(int part_to_show = 0)
 {
+    FLAGS_part_to_show = part_to_show;
     // logging_level
     op::check(0 <= FLAGS_logging_level && FLAGS_logging_level <= 255, "Wrong logging_level value.",
               __LINE__, __FUNCTION__, __FILE__);
@@ -69,3 +49,5 @@ int main(int argc, char *argv[])
     // Running openPoseROS
     return openPoseROS();
 }
+
+
