@@ -12,7 +12,6 @@ OpenPoseROSIO::OpenPoseROSIO(OpenPose &openPose): it_(nh_)
 
 
     nh_.param("/openpose_ros_node/image_topic", image_topic, std::string("/camera/image_raw"));
-    nh_.param("/testtopic", paramTopic, std::string("/testtopic"));
     nh_.param("/openpose_ros_node/output_topic", output_topic, std::string("/openpose_ros/human_list"));
     nh_.param("/openpose_ros_node/output_topic_2", output_person_count, std::string("/openpose_ros/human_count"));
     nh_.param("/openpose_ros_node/output_topic_video", output_topic_video, std::string("/openpose_ros/image"));
@@ -87,7 +86,7 @@ void OpenPoseROSIO::publishImageTopics(const std::shared_ptr<std::vector<op::Dat
     auto outputHeatmap = datumsPtr->at(0).poseHeatMaps;
     op::log(outputHeatmap);
     cv::putText(outputIm, "Person count: " + std::to_string(datumsPtr->at(0).poseKeypoints.getSize(0)),
-                cv::Point(25,25),
+                cv::Point(25,150),
                 cv::FONT_HERSHEY_COMPLEX_SMALL, 1.0, cv::Scalar(255,255,255),1);
 
 
@@ -106,7 +105,6 @@ void OpenPoseROSIO::publishPersonCountTopic(const std::shared_ptr<std::vector<op
 
 void OpenPoseROSIO::paramCallback(const std_msgs::String::ConstPtr& msg){
     openpose_->stop();
-    ros::Duration(5).sleep();
     openPoseROS(std::stoi(msg->data.c_str()));
 }
 
