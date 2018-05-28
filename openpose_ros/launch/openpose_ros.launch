@@ -4,7 +4,7 @@
   <!-- Start openpose_ros -->
   <node pkg="openpose_ros" type="openpose_ros_node" name="openpose_ros_node">
     <param name="image_topic"   	value="$(arg image_topic)" />
-    <param name="output_topic"      value="$(arg output_image_topic)" />
-    <param name="output_topic_video"      value="/openpose_ros/human_list" />
+    <param name="output_topic"    value="/openpose_ros/human_list" />
+    <param name="output_topic_video"      value="$(arg output_image_topic)" />
   </node>
 </launch>

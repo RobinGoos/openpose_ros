@@ -107,4 +107,3 @@ void OpenPoseROSIO::paramCallback(const std_msgs::String::ConstPtr& msg){
     openpose_->stop();
     openPoseROS(std::stoi(msg->data.c_str()));
 }
-
